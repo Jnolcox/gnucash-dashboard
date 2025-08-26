@@ -111,6 +111,18 @@
 (define ACCT-TYPE-ROOT 0)
 (define ACCT-TYPE-TRADING 14)
 
+;; Account type caching optimization
+(define account-type-cache (make-hash-table))
+
+(define (clear-account-type-cache)
+  "Clear the account type cache - useful for testing or when account types change"
+  (set! account-type-cache (make-hash-table)))
+
+(define (get-account-type-cache-stats)
+  "Get statistics about the account type cache - useful for performance monitoring"
+  (let ((cache-size (hash-table-size account-type-cache)))
+    (format #f "Account type cache contains ~a entries" cache-size)))
+
 ;; Simple helper functions
 (define (get-account-balance account)
   "Get current account balance"
@@ -125,27 +137,37 @@
            (= (gnc-numeric-to-double (get-account-balance account)) 0))))
 
 (define (get-account-type-string account)
-  "Get account type as string using proper GnuCash constants"
-  (let ((account-type (xaccAccountGetType account)))
-    (cond 
-     ;; Use GnuCash account type constants directly
-     ((= account-type ACCT-TYPE-BANK) "Bank")
-     ((= account-type ACCT-TYPE-CASH) "Cash")
-     ((= account-type ACCT-TYPE-CREDIT) "Credit Card")
-     ((= account-type ACCT-TYPE-ASSET) "Asset")
-     ((= account-type ACCT-TYPE-LIABILITY) "Liability")
-     ((= account-type ACCT-TYPE-STOCK) "Stock")
-     ((= account-type ACCT-TYPE-MUTUAL) "Mutual Fund")
-     ((= account-type ACCT-TYPE-CURRENCY) "Currency")
-     ((= account-type ACCT-TYPE-INCOME) "Income")
-     ((= account-type ACCT-TYPE-EXPENSE) "Expense")
-     ((= account-type ACCT-TYPE-EQUITY) "Equity")
-     ((= account-type ACCT-TYPE-RECEIVABLE) "Receivable")
-     ((= account-type ACCT-TYPE-PAYABLE) "Payable")
-     ((= account-type ACCT-TYPE-ROOT) "Root")
-     ((= account-type ACCT-TYPE-TRADING) "Trading")
-     ;; Fallback for any unknown types
-     (else "Other"))))
+  "Get account type as string using proper GnuCash constants (with caching optimization)"
+  (let ((account-guid (gncAccountGetGUID account)))
+    ;; Check cache first
+    (let ((cached-type (hash-ref account-type-cache account-guid)))
+      (if cached-type
+          ;; Return cached result
+          cached-type
+          ;; Calculate and cache the result
+          (let* ((account-type (xaccAccountGetType account))
+                 (type-string (cond 
+                               ;; Use GnuCash account type constants directly
+                               ((= account-type ACCT-TYPE-BANK) "Bank")
+                               ((= account-type ACCT-TYPE-CASH) "Cash")
+                               ((= account-type ACCT-TYPE-CREDIT) "Credit Card")
+                               ((= account-type ACCT-TYPE-ASSET) "Asset")
+                               ((= account-type ACCT-TYPE-LIABILITY) "Liability")
+                               ((= account-type ACCT-TYPE-STOCK) "Stock")
+                               ((= account-type ACCT-TYPE-MUTUAL) "Mutual Fund")
+                               ((= account-type ACCT-TYPE-CURRENCY) "Currency")
+                               ((= account-type ACCT-TYPE-INCOME) "Income")
+                               ((= account-type ACCT-TYPE-EXPENSE) "Expense")
+                               ((= account-type ACCT-TYPE-EQUITY) "Equity")
+                               ((= account-type ACCT-TYPE-RECEIVABLE) "Receivable")
+                               ((= account-type ACCT-TYPE-PAYABLE) "Payable")
+                               ((= account-type ACCT-TYPE-ROOT) "Root")
+                               ((= account-type ACCT-TYPE-TRADING) "Trading")
+                               ;; Fallback for any unknown types
+                               (else "Other"))))
+            ;; Store in cache and return
+            (hash-set! account-type-cache account-guid type-string)
+            type-string)))))
 
 (define (get-account-color account)
   "Get account color based on account type"
