@@ -118,7 +118,9 @@
 
 (define (is-placeholder-account? account)
   "Check if account is a placeholder (parent account with no transactions)"
-  (or (xaccAccountGetPlaceholder account)
+  ;; Check placeholder flag first to avoid unnecessary balance calculations
+  (if (xaccAccountGetPlaceholder account)
+      #t
       (and (> (gnc-account-n-children account) 0)
            (= (gnc-numeric-to-double (get-account-balance account)) 0))))
 

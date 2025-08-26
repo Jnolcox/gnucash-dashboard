@@ -1,6 +1,6 @@
 # GnuCash Executive Financial Dashboard
 
-![dashboard](resources/dashboard.png)
+![dashboard](resources/dashboard-2.png)
 
 ## Project Overview
 
