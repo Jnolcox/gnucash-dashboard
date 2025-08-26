@@ -94,6 +94,15 @@
 (use-modules (ice-9 regex))
 (use-modules (ice-9 rdelim))
 
+;; HTML string construction optimization helper functions
+(define (build-html-string . pieces)
+  "Build HTML string using string-port for optimized performance"
+  (call-with-output-string
+    (lambda (port)
+      (for-each (lambda (piece)
+                  (display piece port))
+                pieces))))
+
 ;; Define account type constants (compatible with all GnuCash versions)
 (define ACCT-TYPE-ASSET 2)
 (define ACCT-TYPE-BANK 1)
@@ -481,7 +490,7 @@
                       (else "Critical")))
          (forecast-3m (* net-cash-flow 3))
          (forecast-6m (* net-cash-flow 6)))
-    (string-append
+    (build-html-string
      "<div class='widget-card' style='background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid " trend-color "; margin-bottom: 15px;'>"
      "<h3 class='section-header' style='margin: 0 0 5px 0; color: #111827; font-size: 18px; font-weight: bold;'>Cash Flow Analysis</h3>"
      "<p class='metric-label' style='margin: 0 0 10px 0; color: #6b7280; font-size: 12px;'>Period: " (qof-print-date start-date) " to " (qof-print-date end-date) "</p>"
@@ -586,7 +595,7 @@
          ;; Sort by value descending
          (sorted-allocations (sort allocations (lambda (a b) (> (cadr a) (cadr b))))))
     
-    (string-append
+    (build-html-string
      "<div class='widget-card' style='background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #8b5cf6; margin-bottom: 15px;'>"
      "<h3 class='section-header' style='margin: 0 0 20px 0; color: #111827; font-size: 18px; font-weight: bold;'>Asset Allocation</h3>"
      
@@ -604,7 +613,7 @@
                    (value (cadr allocation))
                    (pct (caddr allocation))
                    (color (cadddr allocation)))
-               (string-append
+               (build-html-string
                 "<div style='margin-bottom: 12px;'>"
                 "<div style='display: flex; justify-content: space-between; margin-bottom: 4px;'>"
                 "<span style='color: #374151; font-size: 14px; font-weight: 500;'>" name "</span>"
@@ -613,7 +622,7 @@
                 "<div style='background: #e5e7eb; border-radius: 4px; height: 24px; overflow: hidden;'>"
                 "<div style='background: " color "; height: 100%; width: " (format #f "~,1f" pct) "%; transition: width 0.3s ease; display: flex; align-items: center; padding-left: 8px;'>"
                 (if (> pct 15) 
-                    (string-append "<span style='color: white; font-size: 12px; font-weight: 600;'>" (format #f "~,1f" pct) "%</span>")
+                    (build-html-string "<span style='color: white; font-size: 12px; font-weight: 600;'>" (format #f "~,1f" pct) "%</span>")
                     "")
                 "</div>"
                 "</div>"
@@ -629,7 +638,7 @@
              (let ((name (car allocation))
                    (pct (caddr allocation))
                    (color (cadddr allocation)))
-               (string-append
+               (build-html-string
                 "<div style='text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px; border-left: 3px solid " color ";'>"
                 "<div style='color: #6b7280; font-size: 11px; margin-bottom: 2px;'>" name "</div>"
                 "<div style='color: #111827; font-size: 16px; font-weight: bold;'>" (format #f "~,1f" pct) "%</div>"
@@ -881,7 +890,7 @@
                                         (else "#ef4444"))))
                         (list (format #f "~,2f%" roi) color)))))
     
-    (string-append
+    (build-html-string
      "<div style='background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #6366f1; margin-bottom: 15px;'>"
      "<h3 style='margin: 0 0 20px 0; color: #111827; font-size: 18px; font-weight: bold;'>Return on Investment by Asset Class</h3>"
      
@@ -928,7 +937,7 @@
                (roi-3m (format-roi stock-3m))
                (roi-6m (format-roi stock-6m))
                (roi-1y (format-roi stock-1y)))
-           (string-append
+           (build-html-string
             "<tr style='border-bottom: 1px solid #f3f4f6;'>"
             "<td style='padding: 12px 8px; font-weight: 500;'>"
             "<span style='display: inline-block; width: 12px; height: 12px; background: #06b6d4; border-radius: 2px; margin-right: 8px;'></span>"
@@ -946,7 +955,7 @@
                (roi-3m (format-roi mutual-3m))
                (roi-6m (format-roi mutual-6m))
                (roi-1y (format-roi mutual-1y)))
-           (string-append
+           (build-html-string
             "<tr style='border-bottom: 1px solid #f3f4f6;'>"
             "<td style='padding: 12px 8px; font-weight: 500;'>"
             "<span style='display: inline-block; width: 12px; height: 12px; background: #0891b2; border-radius: 2px; margin-right: 8px;'></span>"
@@ -964,7 +973,7 @@
                (roi-3m (format-roi bank-3m))
                (roi-6m (format-roi bank-6m))
                (roi-1y (format-roi bank-1y)))
-           (string-append
+           (build-html-string
             "<tr style='border-bottom: 1px solid #f3f4f6;'>"
             "<td style='padding: 12px 8px; font-weight: 500;'>"
             "<span style='display: inline-block; width: 12px; height: 12px; background: #10b981; border-radius: 2px; margin-right: 8px;'></span>"
@@ -1130,7 +1139,7 @@
                              (list-head categories-with-data 3)
                              categories-with-data)))
       
-      (string-append
+      (build-html-string
        "<div style='background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #ec4899; margin-bottom: 15px; max-height: 600px; display: flex; flex-direction: column;'>"
        "<h3 style='margin: 0 0 20px 0; color: #111827; font-size: 18px; font-weight: bold;'>Expense Breakdown by Life Area</h3>"
        
@@ -1160,7 +1169,7 @@
                      (amount (cadr cat-data))
                      (percentage (caddr cat-data))
                      (color (cadddr cat-data)))
-                 (string-append
+                 (build-html-string
                   "<div style='margin-bottom: 12px;'>"
                   "<div style='display: flex; justify-content: space-between; margin-bottom: 4px;'>"
                   "<span style='color: #374151; font-size: 13px; font-weight: 500;'>" category "</span>"
@@ -1169,12 +1178,12 @@
                   "<div style='position: relative; background: #e5e7eb; border-radius: 4px; height: 28px; overflow: hidden;'>"
                   "<div style='background: " color "; height: 100%; width: " (format #f "~,1f" percentage) "%; transition: width 0.3s ease; display: flex; align-items: center; padding: 0 10px;'>"
                   (if (> percentage 10) 
-                      (string-append "<span style='color: white; font-size: 12px; font-weight: 600;'>" (format #f "~,1f" percentage) "%</span>")
+                      (build-html-string "<span style='color: white; font-size: 12px; font-weight: 600;'>" (format #f "~,1f" percentage) "%</span>")
                       "")
                   "</div>"
                   ;; Monthly amount on the right inside the bar
                   (if (> percentage 30)
-                      (string-append "<div style='position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 11px; opacity: 0.9;'>$" (format #f "~,0f" (/ amount period-months)) "/mo</div>")
+                      (build-html-string "<div style='position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 11px; opacity: 0.9;'>$" (format #f "~,0f" (/ amount period-months)) "/mo</div>")
                       "")
                   "</div>"
                   "</div>")))
@@ -1189,14 +1198,14 @@
            (let* ((top-cat (car top-categories))
                   (top-name (car top-cat))
                   (top-pct (caddr top-cat)))
-             (string-append
+             (build-html-string
               "<div style='color: #7f1d1d; font-size: 13px; line-height: 1.5;'>"
               "• Your highest expense is <strong>" top-name "</strong> at " (format #f "~,1f" top-pct) "% of total spending<br/>"
               (if (> top-pct 50)
                   "• Consider reviewing this category for potential savings<br/>"
                   "")
               (if (> (length top-categories) 2)
-                  (string-append "• Top 3 categories account for " 
+                  (build-html-string "• Top 3 categories account for " 
                                 (format #f "~,1f" (fold + 0 (map caddr top-categories)))
                                 "% of expenses")
                   "")
