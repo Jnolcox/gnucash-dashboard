@@ -190,13 +190,39 @@
      ((string=? account-type "Trading") "#6366f1")      ; Indigo
      (else "#6b7280"))))                                ; Gray for unknown
 
+;; Global account name cache for O(1) lookups
+(define *account-name-cache* (make-hash-table))
+(define *cache-root-account* #f)
+
+(define (build-account-name-cache root-account)
+  "Build hash table mapping lowercase account names to account objects"
+  (set! *account-name-cache* (make-hash-table))
+  (set! *cache-root-account* root-account)
+  (let ((accounts (cons root-account (gnc-account-get-descendants root-account))))
+    (for-each 
+     (lambda (account)
+       (let ((name-key (string-downcase (xaccAccountGetName account))))
+         (hash-set! *account-name-cache* name-key account)))
+     accounts)))
+
+(define (ensure-account-cache root-account)
+  "Ensure account cache is built and current for the given root account"
+  (when (or (not *cache-root-account*)
+            (not (equal? *cache-root-account* root-account)))
+    (build-account-name-cache root-account)))
+
 (define (find-account-by-name-recursive root-account name-pattern)
-  "Find account by name pattern recursively"
-  (let ((accounts (gnc-account-get-descendants root-account)))
-    (find (lambda (account)
-            (string-contains (string-downcase (xaccAccountGetName account)) 
-                           (string-downcase name-pattern)))
-          accounts)))
+  "Find account by name pattern using O(1) hash table lookup - optimized version"
+  (ensure-account-cache root-account)
+  (let ((pattern-lower (string-downcase name-pattern)))
+    ;; First try exact match for best performance
+    (or (hash-ref *account-name-cache* pattern-lower)
+        ;; Fall back to substring search if exact match fails
+        (let ((accounts (cons root-account (gnc-account-get-descendants root-account))))
+          (find (lambda (account)
+                  (string-contains (string-downcase (xaccAccountGetName account)) 
+                                 pattern-lower))
+                accounts)))))
 
 (define (get-account-balance-at-date account target-date)
   "Get account balance at a specific date by adjusting current balance for transactions after target date"
